@@ -1,10 +1,12 @@
 module ViladrichCollinHW02()
 
+
 using Triangulate
 using PyPlot
 using ExtendableSparse
 using SparseArrays
 using Printf
+using Pandas
 
 	function plot(Plotter::Module,u,pointlist, trianglelist)
 	    cmap="coolwarm"
@@ -30,7 +32,7 @@ using Printf
 	        PyPlot.subplot(122)
 	        PyPlot.title("Out")
 	        Triangulate.plot(PyPlot,triout,voronoi=voronoi)
-	        PyPlot.show()
+
 	    end
 	end
 
@@ -45,7 +47,7 @@ using Printf
 	        PyPlot.subplot(122)
 	        PyPlot.title("Solution")
 	        plot(PyPlot,u,triout.pointlist, triout.trianglelist)
-	        
+
 	    end
 	end
 
@@ -203,7 +205,7 @@ using Printf
 	    return (sqrt(l2norm),sqrt(h1norm));
 	end
 
-		
+
 
 
 
@@ -218,12 +220,12 @@ using Printf
 			x[i,2] = sin(alpha) * x[i-1,1] + cos(alpha) * x[i-1,2]
 		end
 
-		precision_array = [	"0.025" 
-							"0.00625" 
-							"0.0015625" 
-							"0.000390625" 
-							"0.00009765625" 
-							"0.0000244140625" 
+		precision_array = [	"0.025"
+							"0.00625"
+							"0.0015625"
+							"0.000390625"
+							"0.00009765625"
+							"0.0000244140625"
 							"0.000006103515625" ]
 		refinement_level = zeros(7)
 		smallest_edge_length = zeros(7)
@@ -231,7 +233,7 @@ using Printf
 		number_of_vertices = zeros(7)
 
 
-		
+
 		for i=1:7
 
 			input= "Dcva"*precision_array[i]
@@ -274,36 +276,70 @@ using Printf
 		print(result)
 	end
 
-	function task2(n,refinement)
-		triout = discretize(n,refinement)
-
-		n=size(triout.pointlist,2)
-		frhs(x,y)=1
-	    gbc(x,y)=0
-	    matrix=spzeros(n,n)
-	    rhs=zeros(n)
-	    assemble!(matrix,rhs,frhs,gbc,triout.pointlist,triout.trianglelist, triout.segmentlist)
-	    sol=matrix\rhs
-
-	    u(x,y)=-(1/4)*(x^2)-(1/4)*(y^2)+(1/4)
-
-	    u_vector=zeros(n)
-	    error=0
-	    for i=1:n
-	    	error += abs(u(triout.pointlist[1,i],triout.pointlist[2,i])-sol[i])
-	    	u_vector[i]=u(triout.pointlist[1,i],triout.pointlist[2,i])
-	    end
-	    norm_vector=u_vector-sol
-	    @show norms(norm_vector,triout.pointlist,triout.trianglelist)
-	    @show avg_error=error/n
-
-	    plotpair(PyPlot,sol,triout)
+#=
+Discussion Task 2.
+To compare the exact solution with the approximation by the mesh, we first note
+that the exact solution is a paraboliod, and thus has radial symmetry and
+decreases steadily from 1/4 for r=0 to 0 for r=1. For coarse outlines of the
+polygonal border the FEM approximation cannot reproduce the radial symmetry of
+the exact solution even for high refinement levels. On the other hand, coarse
+mesh generation leads to irregular level curves throughout the interior of the
+mesh and become more pronounced in the center region where the FEM approximation
+is farther away from the boundary conditions, where the values of FEM and
+exact solution coincide by construction.
+=#
 
 
+
+	function task2()
+		fig, axs = subplots(5,5)
+		error_table = zeros(5,5)
+		for polyline_index=1:5
+			n_polyline=polyline_index+2#2^polyline_index+1
+			for refinement=1:5
+				mesh_size=0.1*2.0^(-refinement)
+				print(mesh_size)
+				triout = discretize(n_polyline,string(mesh_size))
+
+				n=size(triout.pointlist,2)
+				frhs(x,y)=1
+			    gbc(x,y)=0
+			    matrix=spzeros(n,n)
+			    rhs=zeros(n)
+			    assemble!(matrix,rhs,frhs,gbc,triout.pointlist,triout.trianglelist, triout.segmentlist)
+			    sol=matrix\rhs
+
+			    u(x,y)=-1/4*(x^2+y^2)+(1/4)
+
+			    u_vector=zeros(n)
+			    error=0
+			    for i=1:n
+			    	error += abs(u(triout.pointlist[1,i],triout.pointlist[2,i])-sol[i])
+			    	u_vector[i]=u(triout.pointlist[1,i],triout.pointlist[2,i])
+			    end
+			    norm_vector=u_vector-sol
+			    @show norms(norm_vector,triout.pointlist,triout.trianglelist)
+				@show avg_error=error/n
+				@show avg_log_error=(avg_error)
+
+				error_table[polyline_index,refinement]=avg_log_error
+
+				plotpair(PyPlot,sol,triout)
+				PyPlot.clf()
+				savefig("plotpair$n_polyline$refinement.png")
+
+
+			end
+		end
+		savefig("pair_plots.png")
+		pcolormesh(error_table)
+		colorbar()
+		#savefig("log_error_heatmap.png")
+		PyPlot.clf()
+		for i in 1:5
+			scatter(collect(1:5),error_table[i,:])
+		end
+		savefig("error_scatter.png")
 
 	end
-
-
-
-
 end
