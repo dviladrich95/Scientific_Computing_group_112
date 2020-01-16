@@ -1,14 +1,5 @@
 module ViladrichCollinHW02()
 
-import Pkg
-Pkg.add("Triangulate")
-Pkg.add("PyPlot")
-Pkg.add("ExtendableSparse")
-Pkg.add("SparseArrays")
-Pkg.add("Printf")
-Pkg.add("Pandas")
-
-
 using Pandas
 using Triangulate
 using PyPlot
@@ -304,10 +295,10 @@ exact solution coincide by construction.
 
 
 	function task2()
-		error_table = zeros(5,5)
-		for polyline_index=1:5
-			n_polyline=2^polyline_index+1
-			for refinement=1:5
+		error_table = zeros(10,10)
+		for polyline_index=1:10
+			n_polyline=polyline_index+2#2^polyline_index+1
+			for refinement=1:10
 				mesh_size=0.1*2.0^(-refinement)
 				print(mesh_size)
 				triout = discretize(n_polyline,string(mesh_size))
@@ -331,23 +322,25 @@ exact solution coincide by construction.
 			    norm_vector=u_vector-sol
 			    @show norms(norm_vector,triout.pointlist,triout.trianglelist)
 				@show avg_error=error/n
-				@show avg_log_error=log(avg_error)
+				@show avg_log_error=(avg_error)
 
 				error_table[polyline_index,refinement]=avg_log_error
-				scatter_plot=scatter(refinement,avg_error)
-				savefig("scatterplot$n_polyline$refinement.png")
 				PyPlot.clf()
 
 			    plotpair(PyPlot,sol,triout)
-				savefig("plotpair$n_polyline$refinement.png")
+				#savefig("plotpair$n_polyline$refinement.png")
 				PyPlot.clf()
 
 			end
 		end
 		pcolormesh(error_table)
 		colorbar()
-		savefig("log_error_heatmap.png")
+		#savefig("log_error_heatmap.png")
 		PyPlot.clf()
+		for i in 1:10
+			scatter(collect(1:10),error_table[i,:])
+		end
+		savefig("error_scatter.png")
 	end
 
 
